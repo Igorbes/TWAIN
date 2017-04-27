@@ -10,6 +10,12 @@ typedef TW_UINT16 (*_DSM_Entry)(pTW_IDENTITY pOrigin,
                                TW_UINT16    DAT,
                                TW_UINT16    MSG,
                                TW_MEMREF    pData);
+typedef TW_UINT16 (*TW__DSM_Entry)(pTW_IDENTITY pOrigin,
+                                pTW_IDENTITY pDest,
+                                TW_UINT32    DG,
+                                TW_ENTRYPOINT    DAT,
+                                TW_UINT16    MSG,
+                                TW_MEMREF    pData);
 int main() {
     TW_IDENTITY AppID;
     AppID.Id = 0;
@@ -26,14 +32,21 @@ int main() {
     lstrcpy (AppID.ProductName, "Specific App Product Name");
     HMODULE hm = LoadLibrary("TWAINDSM.dll");
     if(hm == NULL) {
-        printf("TwainConnect.dll not found");
+        printf("TWAINDSM.dll not found\n");
     } else {
         _DSM_Entry dsm_entry = (_DSM_Entry)GetProcAddress(hm, "DSM_Entry");
+        TW__DSM_Entry dsm_entry_tw = (TW__DSM_Entry)GetProcAddress(hm, "DSM_Entry");
         if(dsm_entry == NULL) {
-            printf("Function not found");
+            printf("Function not found\n");
         } else {
-            printf("Function found");
-            TW_UINT16 rc = dsm_entry(&AppID, NULL, DG_CONTROL, DAT_PARENT, MSG_OPENDSM, NULL);
+            printf("Function found\n");
+            printf("Initialize the Source Manager\n");
+            dsm_entry(&AppID, NULL, DG_CONTROL, DAT_PARENT, MSG_OPENDSM, NULL);
+            printf("Select the Source\n");
+            TW_ENTRYPOINT tw_entrypoint;
+            TW_UINT16 res = dsm_entry_tw(&AppID, NULL, DG_CONTROL, tw_entrypoint, MSG_GET, NULL);
+            printf("Source is select\n");
+
         }
 
 
