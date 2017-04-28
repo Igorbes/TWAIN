@@ -10,12 +10,7 @@ typedef TW_UINT16 (*_DSM_Entry)(pTW_IDENTITY pOrigin,
                                TW_UINT16    DAT,
                                TW_UINT16    MSG,
                                TW_MEMREF    pData);
-typedef TW_UINT16 (*TW__DSM_Entry)(pTW_IDENTITY pOrigin,
-                                pTW_IDENTITY pDest,
-                                TW_UINT32    DG,
-                                TW_ENTRYPOINT    DAT,
-                                TW_UINT16    MSG,
-                                TW_MEMREF    pData);
+
 int main() {
     TW_IDENTITY AppID;
     AppID.Id = 0;
@@ -35,7 +30,6 @@ int main() {
         printf("TWAINDSM.dll not found\n");
     } else {
         _DSM_Entry dsm_entry = (_DSM_Entry)GetProcAddress(hm, "DSM_Entry");
-        TW__DSM_Entry dsm_entry_tw = (TW__DSM_Entry)GetProcAddress(hm, "DSM_Entry");
         if(dsm_entry == NULL) {
             printf("Function not found\n");
         } else {
@@ -43,8 +37,17 @@ int main() {
             printf("Initialize the Source Manager\n");
             dsm_entry(&AppID, NULL, DG_CONTROL, DAT_PARENT, MSG_OPENDSM, NULL);
             printf("Select the Source\n");
-            TW_ENTRYPOINT tw_entrypoint;
-            TW_UINT16 res = dsm_entry_tw(&AppID, NULL, DG_CONTROL, tw_entrypoint, MSG_GET, NULL);
+            if(AppID.SupportedGroups == DF_DS2) {
+                TW_ENTRYPOINT tw_entrypoint;
+                TW_UINT16 res = dsm_entry(&AppID, NULL, DG_CONTROL, DAT_ENTRYPOINT, MSG_GET, (TW_MEMREF) &tw_entrypoint);
+            } else{
+                TW_IDENTITY tw_identity;
+                tw_identity.Id = 0;
+               lstrcpy (tw_identity.ProductName, "\0");
+                dsm_entry(&AppID, NULL, DG_CONTROL, DAT_IDENTITY, MSG_USERSELECT, (TW_MEMREF) &tw_identity);
+                printf("selected available source\n");
+            }
+
             printf("Source is select\n");
 
         }
