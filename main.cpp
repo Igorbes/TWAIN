@@ -43,8 +43,15 @@ int main() {
             } else{
                 TW_IDENTITY tw_identity;
                 tw_identity.Id = 0;
-               lstrcpy (tw_identity.ProductName, "\0");
-                dsm_entry(&AppID, NULL, DG_CONTROL, DAT_IDENTITY, MSG_USERSELECT, (TW_MEMREF) &tw_identity);
+                lstrcpy (tw_identity.ProductName, "\0");
+                TW_UINT16 res = dsm_entry(&AppID, NULL, DG_CONTROL, DAT_IDENTITY, MSG_USERSELECT, (TW_MEMREF) &tw_identity);
+                if(res == TWRC_CANCEL) {
+                    printf("Cancel\n");
+                } else if(res == TWRC_SUCCESS) {
+                    printf("Success\n");
+                } else if(res == TWRC_FAILURE) {
+                    printf("Failure\n");
+                }
                 printf("selected available source\n");
             }
 
