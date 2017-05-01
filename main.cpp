@@ -11,6 +11,40 @@ typedef TW_UINT16 (*_DSM_Entry)(pTW_IDENTITY pOrigin,
                                TW_UINT16    MSG,
                                TW_MEMREF    pData);
 
+void set_capability(_DSM_Entry &pFunction, TW_IDENTITY &App, TW_IDENTITY &twIdentity) {
+    TW_CAPABILITY tw_capability;
+    TW_UINT16  res = pFunction(&App, &twIdentity, DG_CONTROL, DAT_CAPABILITY, MSG_GET, &tw_capability);
+    printf("Set capability \n");
+
+}
+
+TW_UINT16 FAR PASCAL DSMCallback(pTW_IDENTITY _pOrigin,
+                                 pTW_IDENTITY _pDest,
+                                 TW_UINT32    _DG,
+                                 TW_UINT16    _DAT,
+                                 TW_UINT16    _MSG,
+                                 TW_MEMREF    _pData){}
+
+void show_ui(_DSM_Entry pFunction, TW_IDENTITY App, TW_IDENTITY twIdentity, HWND pHWND__) {
+    TW_USERINTERFACE tw_userinterface;
+    tw_userinterface.ShowUI = TRUE;
+    tw_userinterface.ModalUI = FALSE;
+    tw_userinterface.hParent = NULL;
+    TW_UINT16  res = pFunction(&App, &twIdentity, DG_CONTROL, DAT_USERINTERFACE, MSG_ENABLEDS, &tw_userinterface);
+    if(TWRC_SUCCESS == res) {
+        printf("Show ui \n");
+        TW_CALLBACK callback;
+        callback.CallBackProc = (TW_MEMREF)DSMCallback;
+        callback.RefCon = 0;
+
+        res = pFunction(&App, &twIdentity, DG_CONTROL, DAT_CALLBACK, MSG_REGISTER_CALLBACK, (TW_MEMREF)&callback);
+        if(TWRC_SUCCESS == res) {
+           printf("Registered callback");
+        }
+    }
+}
+
+
 int main() {
     TW_IDENTITY AppID;
     AppID.Id = 0;
@@ -25,7 +59,7 @@ int main() {
     lstrcpy (AppID.Manufacturer, "App's Manufacturer");
     lstrcpy (AppID.ProductFamily, "App's Product Family");
     lstrcpy (AppID.ProductName, "Specific App Product Name");
-    HMODULE hm = LoadLibrary("TWAINDSM.dll");
+    HMODULE hm = LoadLibrary("C:\\Users\\Monstermash\\Dropbox\\twaindsm-2.3.0.win.bin\\twain32\\TWAINDSM.dll");
     if(hm == NULL) {
         printf("TWAINDSM.dll not found\n");
     } else {
@@ -33,37 +67,42 @@ int main() {
         if(dsm_entry == NULL) {
             printf("Function not found\n");
         } else {
-            printf("Function found\n");
-            printf("Initialize the Source Manager\n");
-            dsm_entry(&AppID, NULL, DG_CONTROL, DAT_PARENT, MSG_OPENDSM, NULL);
-            printf("Select the Source\n");
-            if(AppID.SupportedGroups == DF_DS2) {
-                TW_ENTRYPOINT tw_entrypoint;
-                TW_UINT16 res = dsm_entry(&AppID, NULL, DG_CONTROL, DAT_ENTRYPOINT, MSG_GET, (TW_MEMREF) &tw_entrypoint);
-            } else{
+            printf("Load DDL. State 2\n");
+            HWND parent = NULL;
+            TW_UINT16 res = dsm_entry(&AppID, NULL, DG_CONTROL, DAT_PARENT, MSG_OPENDSM, parent);
+            if(res == TWRC_SUCCESS) {
+                printf("DSM is opened. State 3\n");
                 TW_IDENTITY tw_identity;
                 tw_identity.Id = 0;
-                lstrcpy (tw_identity.ProductName, "\0");
-                TW_UINT16 res = dsm_entry(&AppID, NULL, DG_CONTROL, DAT_IDENTITY, MSG_USERSELECT, (TW_MEMREF) &tw_identity);
+                res = dsm_entry(&AppID, NULL, DG_CONTROL, DAT_IDENTITY, MSG_USERSELECT, (TW_MEMREF) &tw_identity);
                 if(res == TWRC_CANCEL) {
                     printf("Cancel\n");
                 } else if(res == TWRC_SUCCESS) {
-                    printf("Success\n");
+                    set_capability(dsm_entry, AppID, tw_identity);
+                    res = dsm_entry(&AppID, NULL, DG_CONTROL, DAT_IDENTITY, MSG_OPENDS, (TW_MEMREF) &tw_identity);
+                    if(res == TWRC_SUCCESS) {
+                        printf("Success open DS\n");
+                        show_ui(dsm_entry, AppID, tw_identity, parent);
+
+                    }
                 } else if(res == TWRC_FAILURE) {
                     printf("Failure\n");
                 }
-                printf("selected available source\n");
+            } else {
+                printf("DSM is failed\n");
             }
-
-            printf("Source is select\n");
-
         }
-
-
     }
-    FreeLibrary(hm);
+    std::string input;
+//    for (;;)
+//    {
+//        std::cout << "\n(h for help) > ";
+//        std::cin >> input;
+//        std::cout << std::endl;
+//    }
     _getch();
-//    TW_UINT16 rc;
-//    rc = DSM_Entry(&AppID, NULL, DG_CONTROL, DAT_PARENT, MSG_OPENDSM, NULL);
+    printf("Free library");
+    FreeLibrary(hm);
     return 0;
 }
+
